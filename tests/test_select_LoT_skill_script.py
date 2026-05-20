@@ -51,6 +51,7 @@ def test_one_geom():
         bases=["aug-cc-pVTZ"],
         auto_download=True,
         )
+    print(df)
     _check_df_shape_and_cols(df, 10, "1 geom, 1 basis, 10 methods")
 
 
@@ -64,6 +65,7 @@ def test_two_geom():
         bases=["aug-cc-pVTZ", "aug-cc-pVQZ"],
         auto_download=True,
         )
+    print(df)
     _check_df_shape_and_cols(df, 40, "2 geoms, 2 bases, 10 methods")
 
 
@@ -77,4 +79,5 @@ def test_many_geom():
         bases=None,
         auto_download=True,
         )
+    print(df)
     _check_df_shape_and_cols(df, 420, "7 geoms, 6 bases, 10 methods")

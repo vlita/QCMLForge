@@ -17,6 +17,11 @@ from . import atomic_datasets
 # model_dir = os.path.dirname(os.path.realpath(__file__)) + "/models/"
 model_dir = resources.files("apnet_pt").joinpath("models")
 HF_REPO_ID = "awallace3/qcmlforge"
+PRETRAINED_OVERRIDE_DIR = os.getenv("QCMLFORGE_PRETRAINED_DIR", "/projects/cos-lab-cs207/ds/awallace43/projects/AI4Science_QC/qcml_models/models").strip()
+DAPNET_OVERRIDE_DIR = os.getenv("QCMLFORGE_DAPNET_DIR", "/projects/cos-lab-cs207/ds/awallace43/projects/AI4Science_QC/qcml_models/dap2").strip()
+PRETRAINED_OVERRIDE_LAYOUT = os.getenv(
+    "QCMLFORGE_PRETRAINED_LAYOUT", "flat" # SET DEFAULT BACK TO "expected" FOR NORMAL BEHAVIOR
+).strip().lower()
 _DOWNLOAD_APPROVED = None
 LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +45,30 @@ def _hf_hub_download(rel_path: str, local_files_only: bool) -> str:
 def _packaged_model_path(rel_path: str) -> str | None:
     model_path = resources.files("apnet_pt").joinpath("models", *rel_path.split("/"))
     return str(model_path) if model_path.is_file() else None
+
+
+def _override_model_path(rel_path: str) -> str | None:
+    if PRETRAINED_OVERRIDE_LAYOUT not in {"expected", "flat"}:
+        raise ValueError(
+            "QCMLFORGE_PRETRAINED_LAYOUT must be 'expected' or 'flat'."
+        )
+    if rel_path.startswith("dapnet2/") and DAPNET_OVERRIDE_DIR:
+        dapnet_rel = rel_path[len("dapnet2/") :]
+        if PRETRAINED_OVERRIDE_LAYOUT == "flat":
+            if dapnet_rel.endswith("_0.pt") and "_to_" in dapnet_rel:
+                stem = dapnet_rel[: -len("_0.pt")]
+                left_right = stem.split("_to_", 1)
+                if len(left_right) == 2:
+                    dapnet_rel = f"{left_right[0]}_{left_right[1]}.pt"
+        override_path = os.path.join(DAPNET_OVERRIDE_DIR, dapnet_rel)
+        return override_path if os.path.isfile(override_path) else None
+    if PRETRAINED_OVERRIDE_DIR:
+        if PRETRAINED_OVERRIDE_LAYOUT == "flat":
+            if rel_path in {"am_ensemble/am_0.pt", "ap2_ensemble/ap2_0.pt"}:
+                rel_path = rel_path.split("/", 1)[1]
+        override_path = os.path.join(PRETRAINED_OVERRIDE_DIR, *rel_path.split("/"))
+        return override_path if os.path.isfile(override_path) else None
+    return None
 
 
 def _allow_model_download(missing_paths: list[str]) -> bool:
@@ -93,6 +122,10 @@ def _resolve_pretrained_paths(rel_paths: list[str]) -> dict[str, str]:
     missing = []
 
     for rel_path in rel_paths:
+        override = _override_model_path(rel_path)
+        if override is not None:
+            resolved[rel_path] = override
+            continue
         try:
             resolved[rel_path] = _hf_hub_download(rel_path, local_files_only=True)
         except ImportError:

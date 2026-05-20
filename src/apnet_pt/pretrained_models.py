@@ -637,19 +637,26 @@ def dapnet2_model_predict(
     )
     apnet2.model.return_hidden_states = True
     if pre_trained_model_path is None:
-        assert m1 in dapnet2_levels_of_theory_pretrained(), (
-            f"Pretrained model for {m1} not found. "
-            f"Please use one of the following: {dapnet2_levels_of_theory_pretrained()}"
-        )
-        assert m2 == "CCSD(T)/CBS/CP", (
-            "Pretrained models only predict m2=CCSD(T)/CBS/CP"
-        )
+        if m2 != "CCSD(T)/CBS/CP":
+            LOGGER.warning(
+                "Non-standard m2 requested for dAPNet2: %s. Attempting to load "
+                "a matching on-disk model.",
+                m2,
+            )
         dapnet_rel_path = (
             f"dapnet2/{clean_str_for_filename(m1)}_to_{clean_str_for_filename(m2)}_0.pt"
         )
-        pre_trained_model_path = _resolve_pretrained_paths([dapnet_rel_path])[
-            dapnet_rel_path
-        ]
+        try:
+            pre_trained_model_path = _resolve_pretrained_paths([dapnet_rel_path])[
+                dapnet_rel_path
+            ]
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"Pretrained model for {m1} -> {m2} not found at '{dapnet_rel_path}'. "
+                "Ensure the model exists on disk or pass pre_trained_model_path. "
+                "Default known levels of theory are: "
+                f"{dapnet2_levels_of_theory_pretrained()}"
+            ) from exc
     dapnet2 = AtomPairwiseModels.dapnet2.dAPNet2Model(
         atom_model=atom_model,
         apnet2_model=apnet2,

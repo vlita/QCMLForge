@@ -1,0 +1,14 @@
+Use opencode-skill-creator to create a skill called run-IEs. Given a 
+correctly formatted dataframe in an expected format run-IEs will 
+enable an agent to submit jobs on a locally hosted instance of a QCArchive 
+QCFractal compute server, using the python script @src/qcml_mcp/run-IEs/example_manybody.py.
+
+The agent should be able to use functions from the script to submit, query, and manage jobs.
+Importantly, the agent must not continously call retrieve_manybodies() when records are waiting 
+or running. QM jobs take a long time, and doing so will only fill up the context window or cause
+a timeout.
+
+When a user requests an agent to use run-IEs, The agent should simply queue the jobs, confirm they 
+are running or waiting, and then exit. When a user asks the agents if the jobs are complete, check to 
+see if they are complete with check_manybody_progress , and if they are not, tell the user and then exit. 
+If jobs are complete, return the results from the output dataframe in a summary, and save the dataframe. 

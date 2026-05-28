@@ -1,0 +1,23 @@
+{
+  "skill_name": "connect-qcf",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I think my local QCFractal is already up. Please verify it is active using process checks and qcportal connection to localhost:7777, then give me a concise health summary.",
+      "expected_output": "Checks both qcfractal-server and qcfractal-compute-manager processes, runs qcportal PortalClient connection test to localhost:7777, and returns concise status.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "My existing QCFractal setup in $QCF_BASE_FOLDER is currently down. Start server and compute manager in background with monitorable logs, then re-check process status and qcportal connectivity.",
+      "expected_output": "Uses existing config under QCF_BASE_FOLDER, starts server and manager detached, includes monitoring commands, and verifies with process plus qcportal checks.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I have no local QCFractal instance yet. Initialize using qca.py defaults, require QCF_BASE_FOLDER, start services in background, and confirm I can connect via qcportal.",
+      "expected_output": "Requires QCF_BASE_FOLDER, follows qca.py-style initialization defaults, starts server/manager in background, and validates connectivity with PortalClient.",
+      "files": []
+    }
+  ]
+}

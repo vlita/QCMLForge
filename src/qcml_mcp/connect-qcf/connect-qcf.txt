@@ -1,0 +1,29 @@
+Use opencode-skill-creator to create a skill called connect-qcf. 
+connect-qcf will enable an agent to create a locally hosted instance
+of a QCArchive QCFractal compute server, using the python script 
+@src/qcmlforge/qca.py.
+
+The agent should be able to identify if a QCFractal instance already 
+exists and is active, following the logic in the script. If an active
+instance exists, the agent will then use the following to check that
+there are no issues in connecting to the server:
+
+>>> import qcportal
+
+>>> client = qcportal.PortalClient(
+        "http://localhost:7777",
+        verify=False,
+    )
+
+If an inactive instance exists, the agent can start the server and compute
+manager following the logic in the script. Note that this will run the server
+in the foreground, so the agent will not be able to use the terminal anymore. 
+These processes may be placed in the background with screen or any other 
+utilities if needed, as long as the agent is able to monitor the outputs. 
+
+If no instance exists, the agent will follow the logic of @src/qcmlforge/qca.py
+to start the server. In general, it is recommended that most fields are kept to
+their default values. Note that since this workflow is locally hosted, No security 
+precautions are needed, and the dummy username/password in the startup script
+is not sensitive information. All dependencies are loaded in the active environment. 
+

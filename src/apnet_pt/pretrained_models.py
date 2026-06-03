@@ -17,11 +17,6 @@ from . import atomic_datasets
 # model_dir = os.path.dirname(os.path.realpath(__file__)) + "/models/"
 model_dir = resources.files("apnet_pt").joinpath("models")
 HF_REPO_ID = "awallace3/qcmlforge"
-PRETRAINED_OVERRIDE_DIR = os.getenv("QCMLFORGE_PRETRAINED_DIR", "/projects/cos-lab-cs207/ds/awallace43/projects/AI4Science_QC/qcml_models/models").strip()
-DAPNET_OVERRIDE_DIR = os.getenv("QCMLFORGE_DAPNET_DIR", "/projects/cos-lab-cs207/ds/awallace43/projects/AI4Science_QC/qcml_models/dap2").strip()
-PRETRAINED_OVERRIDE_LAYOUT = os.getenv(
-    "QCMLFORGE_PRETRAINED_LAYOUT", "flat" # SET DEFAULT BACK TO "expected" FOR NORMAL BEHAVIOR
-).strip().lower()
 _DOWNLOAD_APPROVED = None
 LOGGER = logging.getLogger(__name__)
 
@@ -45,30 +40,6 @@ def _hf_hub_download(rel_path: str, local_files_only: bool) -> str:
 def _packaged_model_path(rel_path: str) -> str | None:
     model_path = resources.files("apnet_pt").joinpath("models", *rel_path.split("/"))
     return str(model_path) if model_path.is_file() else None
-
-
-def _override_model_path(rel_path: str) -> str | None:
-    if PRETRAINED_OVERRIDE_LAYOUT not in {"expected", "flat"}:
-        raise ValueError(
-            "QCMLFORGE_PRETRAINED_LAYOUT must be 'expected' or 'flat'."
-        )
-    if rel_path.startswith("dapnet2/") and DAPNET_OVERRIDE_DIR:
-        dapnet_rel = rel_path[len("dapnet2/") :]
-        if PRETRAINED_OVERRIDE_LAYOUT == "flat":
-            if dapnet_rel.endswith("_0.pt") and "_to_" in dapnet_rel:
-                stem = dapnet_rel[: -len("_0.pt")]
-                left_right = stem.split("_to_", 1)
-                if len(left_right) == 2:
-                    dapnet_rel = f"{left_right[0]}_{left_right[1]}.pt"
-        override_path = os.path.join(DAPNET_OVERRIDE_DIR, dapnet_rel)
-        return override_path if os.path.isfile(override_path) else None
-    if PRETRAINED_OVERRIDE_DIR:
-        if PRETRAINED_OVERRIDE_LAYOUT == "flat":
-            if rel_path in {"am_ensemble/am_0.pt", "ap2_ensemble/ap2_0.pt"}:
-                rel_path = rel_path.split("/", 1)[1]
-        override_path = os.path.join(PRETRAINED_OVERRIDE_DIR, *rel_path.split("/"))
-        return override_path if os.path.isfile(override_path) else None
-    return None
 
 
 def _allow_model_download(missing_paths: list[str]) -> bool:
@@ -122,10 +93,6 @@ def _resolve_pretrained_paths(rel_paths: list[str]) -> dict[str, str]:
     missing = []
 
     for rel_path in rel_paths:
-        override = _override_model_path(rel_path)
-        if override is not None:
-            resolved[rel_path] = override
-            continue
         try:
             resolved[rel_path] = _hf_hub_download(rel_path, local_files_only=True)
         except ImportError:
@@ -595,20 +562,124 @@ monA-monB full IE: {pred_IEs[i]}
     return pred_IEs, pairwise_energies, df
 
 
+DAPNET2_PRETRAINED_MODEL_FILENAMES = [
+    "B2PLYP-D2aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B2PLYP-D3aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B2PLYP-D3aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B2PLYPaug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B2PLYPaug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B3LYP-D2aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B3LYP-D3BJ_adz_CCSD_LP_T_RP_CBSCP.pt",
+    "B3LYP-D3aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B3LYP-D3aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B3LYPaug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B3LYPaug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B97-D2aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B97-D3aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B97-D3aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "B97aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "CCSD-F12aaug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "CCSD-F12baug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "CCSD_LP_T_RP_-F12aaug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "CCSD_LP_T_RP_-F12baug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "DW-CCSD_LP_T_RP_-F12aug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "DW-MP2aug-cc-pVDTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "DW-MP2aug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "DW-MP2aug-cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "DW-MP2aug-cc-pVTQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "DW-MP2aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "DW-MP2cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "HF-CABSaug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "HFaug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "HFaug-cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "HFaug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "HFcc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "M05-2Xaug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "M05-2Xaug-cc-pVDZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "MP2-F12aug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "MP2aug-cc-pVDTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "MP2aug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "MP2aug-cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "MP2aug-cc-pVTQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "MP2aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "MP2cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "PBE-D2aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "PBE-D3BJ_adz_CCSD_LP_T_RP_CBSCP.pt",
+    "PBE-D3aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "PBE-D3aug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "PBEH3C_adz_CCSD_LP_T_RP_CBSCP.pt",
+    "PBEaug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "PBEaug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SAPT0aug-cc-pVDZSA_CCSD_LP_T_RP_CBSCP.pt",
+    "SAPT0jun-cc-pVDZSA_CCSD_LP_T_RP_CBSCP.pt",
+    "SAPT2aug-cc-pVDZSA_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-CCSD-F12aaug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-CCSD-F12baug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-MP2-F12aug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-MP2aug-cc-pVDTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-MP2aug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-MP2aug-cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-MP2aug-cc-pVTQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-MP2aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-MP2cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS-SAPT0jun-cc-pVDZSA_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_MI_RP_-CCSD-F12aaug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_MI_RP_-CCSD-F12baug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_MI_RP_-MP2aug-cc-pVDTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_MI_RP_-MP2aug-cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_MI_RP_-MP2aug-cc-pVTQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_MI_RP_-MP2aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_MI_RP_-MP2cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_N_RP_-MP2-F12aug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_N_RP_-MP2aug-cc-pVDTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_N_RP_-MP2aug-cc-pVDZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_N_RP_-MP2aug-cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_N_RP_-MP2aug-cc-pVTQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_N_RP_-MP2aug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "SCS_LP_N_RP_-MP2cc-pVQZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "sSAPT0aug-cc-pVDZSA_CCSD_LP_T_RP_CBSCP.pt",
+    "sSAPT0jun-cc-pVDZSA_CCSD_LP_T_RP_CBSCP.pt",
+    "wB97X-Daug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "wB97X-Daug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+    "wB97X-Vaug-cc-pVTZCP_CCSD_LP_T_RP_CBSCP.pt",
+    "wB97X-Vaug-cc-pVTZunCP_CCSD_LP_T_RP_CBSCP.pt",
+]
+
+
 def dapnet2_levels_of_theory_pretrained():
     """
-    Returns a list of possible levels of theory with pretrained models to use
-    in the dapnet2_model_predict(). Note that these pretrained models
-    predicts E=(m1-CCSD(T)/CBS/CP)
+    Returns a list of possible m1 levels of theory with pretrained dAPNet2
+    models. These pretrained models predict E=(m1-CCSD(T)/CBS/CP).
     """
-    return [
-        "B3LYP-D3/aug-cc-pVTZ/unCP",
-        "B2PLYP-D3/aug-cc-pVTZ/unCP",
-        "wB97X-V/aug-cc-pVTZ/CP",
-        "SAPT0/aug-cc-pVDZ/SA",
-        "MP2/aug-cc-pVTZ/CP",
-        "HF/aug-cc-pVDZ/CP",
+    target = f"_{clean_str_for_filename('CCSD(T)/CBS/CP')}.pt"
+    return [name.removesuffix(target) for name in DAPNET2_PRETRAINED_MODEL_FILENAMES]
+
+
+def _resolve_dapnet2_pretrained_path(m1: str, m2: str) -> str:
+    m1_clean = clean_str_for_filename(m1)
+    m2_clean = clean_str_for_filename(m2)
+    rel_paths = [
+        f"dapnet2/{m1_clean}_to_{m2_clean}_0.pt",
+        f"dapnet2/{m1_clean}_{m2_clean}.pt",
     ]
+    rel_paths.extend(
+        f"dapnet2/{name}"
+        for name in DAPNET2_PRETRAINED_MODEL_FILENAMES
+        if name == f"{m1_clean}_{m2_clean}.pt"
+    )
+
+    errors = []
+    for rel_path in dict.fromkeys(rel_paths):
+        try:
+            return _resolve_pretrained_paths([rel_path])[rel_path]
+        except RuntimeError as exc:
+            errors.append(str(exc))
+
+    raise RuntimeError(
+        f"Pretrained dAPNet2 model for m1={m1!r}, m2={m2!r} not found. "
+        "Available m1 values include: "
+        f"{dapnet2_levels_of_theory_pretrained()}"
+    ) from RuntimeError("\n".join(errors))
 
 
 def dapnet2_model_predict(
@@ -638,25 +709,8 @@ def dapnet2_model_predict(
     apnet2.model.return_hidden_states = True
     if pre_trained_model_path is None:
         if m2 != "CCSD(T)/CBS/CP":
-            LOGGER.warning(
-                "Non-standard m2 requested for dAPNet2: %s. Attempting to load "
-                "a matching on-disk model.",
-                m2,
-            )
-        dapnet_rel_path = (
-            f"dapnet2/{clean_str_for_filename(m1)}_to_{clean_str_for_filename(m2)}_0.pt"
-        )
-        try:
-            pre_trained_model_path = _resolve_pretrained_paths([dapnet_rel_path])[
-                dapnet_rel_path
-            ]
-        except RuntimeError as exc:
-            raise RuntimeError(
-                f"Pretrained model for {m1} -> {m2} not found at '{dapnet_rel_path}'. "
-                "Ensure the model exists on disk or pass pre_trained_model_path. "
-                "Default known levels of theory are: "
-                f"{dapnet2_levels_of_theory_pretrained()}"
-            ) from exc
+            raise ValueError("Pretrained models only predict m2=CCSD(T)/CBS/CP")
+        pre_trained_model_path = _resolve_dapnet2_pretrained_path(m1, m2)
     dapnet2 = AtomPairwiseModels.dapnet2.dAPNet2Model(
         atom_model=atom_model,
         apnet2_model=apnet2,

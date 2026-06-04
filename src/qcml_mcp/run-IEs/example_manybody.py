@@ -139,23 +139,23 @@ def retrieve_manybodies(df: pd.DataFrame = None):
 
     return df
 
-def hard_delete_manybodies_with_children(df: pd.DataFrame):
+def soft_delete_manybodies_with_children(df: pd.DataFrame):
     ids = [_normalize_id(x) for x in df["qcfractal id"].tolist()]
     ids = [i for i in ids if i is not None]
     if not ids:
         return None
-    meta = client.delete_records(ids, soft_delete=False, delete_children=True)
+    meta = client.delete_records(ids, soft_delete=True, delete_children=True)
     print("manybody delete meta:", meta)
     return meta
 
-def cancel_then_hard_delete_manybodies(df: pd.DataFrame):
+def cancel_then_soft_delete_manybodies(df: pd.DataFrame):
     ids = [_normalize_id(x) for x in df["qcfractal id"].tolist()]
     ids = [i for i in ids if i is not None]
     if not ids:
         return None
     meta_cancel = client.cancel_records(ids)
     print("cancel meta:", meta_cancel)
-    meta_delete = client.delete_records(ids, soft_delete=False, delete_children=True)
+    meta_delete = client.delete_records(ids, soft_delete=True, delete_children=True)
     print("delete meta:", meta_delete)
     return meta_delete
 
@@ -205,10 +205,10 @@ def main():
     # # #   DANGER ZONE!   # # #
     
     # # If records error out and you have adressed the error
-    # hard_delete_manybodies_with_children(df2)
+    # soft_delete_manybodies_with_children(df2)
 
     # # If records are running and you need to cancel/delete them
-    # cancel_then_hard_delete_manybodies(df2)
+    # cancel_then_soft_delete_manybodies(df2)
 
     return
     

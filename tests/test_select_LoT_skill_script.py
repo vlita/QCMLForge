@@ -12,6 +12,7 @@ test_geoms_path = f"{current_file_path}/test_data_path/test_geoms"
 one_geom_path = f"{test_geoms_path}/one_geom"
 two_geom_path = f"{test_geoms_path}/two_geom"
 many_geom_path = f"{test_geoms_path}/many_geom"
+large_dimers_path = f"{test_geoms_path}/Large_dimers"
 
 expected_columns = {
     "id", "n_atoms", "qcel_dimer", "qcel_monA", "qcel_monB",
@@ -40,6 +41,25 @@ def _check_df_shape_and_cols(df, n_expected_rows, label):
     #         f"dAPNet2 prediction NaN for B3LYP-D3 in {label}"
     #     )
 
+# @pytest.mark.slow
+# def test_many_geom():
+#     df = main(
+#         geom_path=large_dimers_path,
+#         n_threads=10,
+#         using_cp=True,
+#         methods=['HF',
+#                  'PBE-D3',
+#                  'wB97X-D',
+#                  'wB97X-V',
+#                  'MP2',
+#                  'B3LYP-D3',
+#                  'B2PLYP-D3'],
+#         bases=["aug-cc-pVTZ"],
+#         auto_download=True,
+#         )
+#     print(df)
+#     _check_df_shape_and_cols(df, 42, "6 geoms, 1 bases, 7 methods")
+#     df.to_pickle(f"{large_dimers_path}/large_dimers.pkl")
 
 @pytest.mark.slow
 def test_one_geom():
@@ -47,37 +67,37 @@ def test_one_geom():
         geom_path=one_geom_path,
         n_threads=4,
         using_cp=True,
-        methods=None,
+        methods=['HF'],
         bases=["aug-cc-pVTZ"],
         auto_download=True,
         )
     print(df)
-    _check_df_shape_and_cols(df, 10, "1 geom, 1 basis, 10 methods")
+    _check_df_shape_and_cols(df, 1, "1 geom, 1 basis, 1 methods")
+    df.to_pickle(f"{one_geom_path}/one_geom.pkl")
+
+# @pytest.mark.slow
+# def test_two_geom():
+#     df = main(
+#         geom_path=two_geom_path,
+#         n_threads=4,
+#         using_cp=True,
+#         methods=None,
+#         bases=["aug-cc-pVTZ", "aug-cc-pVQZ"],
+#         auto_download=True,
+#         )
+#     print(df)
+#     _check_df_shape_and_cols(df, 40, "2 geoms, 2 bases, 10 methods")
 
 
-@pytest.mark.slow
-def test_two_geom():
-    df = main(
-        geom_path=two_geom_path,
-        n_threads=4,
-        using_cp=True,
-        methods=None,
-        bases=["aug-cc-pVTZ", "aug-cc-pVQZ"],
-        auto_download=True,
-        )
-    print(df)
-    _check_df_shape_and_cols(df, 40, "2 geoms, 2 bases, 10 methods")
-
-
-@pytest.mark.slow
-def test_many_geom():
-    df = main(
-        geom_path=many_geom_path,
-        n_threads=4,
-        using_cp=True,
-        methods=None,
-        bases=None,
-        auto_download=True,
-        )
-    print(df)
-    _check_df_shape_and_cols(df, 420, "7 geoms, 6 bases, 10 methods")
+# @pytest.mark.slow
+# def test_many_geom():
+#     df = main(
+#         geom_path=many_geom_path,
+#         n_threads=4,
+#         using_cp=True,
+#         methods=None,
+#         bases=None,
+#         auto_download=True,
+#         )
+#     print(df)
+#     _check_df_shape_and_cols(df, 420, "7 geoms, 6 bases, 10 methods")

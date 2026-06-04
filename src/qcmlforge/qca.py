@@ -35,7 +35,7 @@ def setup_qcarchive_qcfractal(
         "update_frequency": 15,
         "cores_per_worker": 10,
         "max_workers": 1,
-        "memory_per_worker": 200,
+        "memory_per_worker": 250,
     },
     worker_sh="""#!/usr/bin/bash
 conda activate p4_qcml

@@ -16,8 +16,8 @@ def load_coeffs(
     ) -> pd.DataFrame:
 
     un = "" if restricted else "un"
-    ref_path = resources.files("qcml_mcp.data").joinpath(
-        f"time_fit_inference_df_{un}restricted.pkl"
+    ref_path = resources.files("qcml_mcp.timings").joinpath(
+        f"polynomial_coefficients.pkl"
     )
     with ref_path.open("rb") as handle:
         return pd.read_pickle(handle).set_index("method")
@@ -244,17 +244,8 @@ def predict_ie_errors_batch(
     multiple molecular complexes. Each p4_string defines a molecular geometry
     in Psi4 format.
 
-    Acceptable starting_level_of_theory values currently only include:
+    NOTE Check acceptable starting_level_of_theory values at pretrain_models/dapnet2/
 
-    ***NOTE: THIS LIST MAY NOT BE UP TO DATE***
-    [
-    "B3LYP-D3/aug-cc-pVTZ/unCP",
-    "B2PLYP-D3/aug-cc-pVTZ/unCP",
-    "wB97X-V/aug-cc-pVTZ/CP",
-    "SAPT0/aug-cc-pVDZ/SA",
-    "MP2/aug-cc-pVTZ/CP",
-    "HF/aug-cc-pVDZ/CP",
-    ]
 
     Input dataframe must contain dimer geometries as qcelemental.models.Molecule
     objects.

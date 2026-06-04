@@ -1,0 +1,23 @@
+{
+  "skill_name": "full-agentic-workflow",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "full-agentic-workflow for the geoms in tests/test_data_path/test_geoms/one_geom/ with a budget of 10000 seconds. Reference IE for benzene_dimer is -2.632 kcal/mol at CCSD(T)/CBS/CP. Only submit the top 3 LoTs to avoid overwhelming the server.",
+      "expected_output": "Runs the full pipeline: select-LoT starting from raw geometry in the qcml env, recommends best LoT, switches to p4_qcml env, connects to QCArchive, queues the top 3 LoTs as manybody jobs, reports submission and exits.",
+      "files": ["tests/test_data_path/test_geoms/one_geom/benzene_dimer.dat"]
+    },
+    {
+      "id": 2,
+      "prompt": "full-agentic-workflow using the pre-computed select-LoT output at tests/test_data_path/test_geoms/one_geom/one_geom.pkl with a budget of 500 seconds. Reference IE for benzene_dimer is -2.632 kcal/mol at CCSD(T)/CBS/CP. Skip the select-LoT parsing phase — use the pickle directly as the prediction dataframe. Submit the top 3 LoTs only.",
+      "expected_output": "Skips Phase 1 geometry parsing (uses pre-computed pickle), filters by 500s budget, picks best LoT, connects to QCFractal, queues top 3 LoTs, reports submission and exits.",
+      "files": ["tests/test_data_path/test_geoms/one_geom/one_geom.pkl"]
+    },
+    {
+      "id": 3,
+      "prompt": "full-agentic-workflow with geoms at tests/test_data_path/test_geoms/one_geom/ and a budget of 1 second. Methods: HF, bases: cc-pVDZ. Reference IE for benzene_dimer is -2.632 kcal/mol at CCSD(T)/CBS/CP. Submit only the top LoT.",
+      "expected_output": "Runs select-LoT, filters by a very tight 1-second budget, likely finds no feasible LoT, reports that no LoT fits the budget, and stops before connecting to QCFractal.",
+      "files": ["tests/test_data_path/test_geoms/one_geom/benzene_dimer.dat"]
+    }
+  ]
+}

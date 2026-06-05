@@ -135,7 +135,15 @@ Follow the `connect-qcf` skill workflow:
 1. Ensure `QCF_BASE_FOLDER` is set. If not, ask the user.
 2. Check if a QCFractal instance already exists at `$QCF_BASE_FOLDER`.
 3. If it exists but is inactive, start server and compute manager in background.
-4. If no setup exists, initialize using `src/qcmlforge/qca.py` conventions (port 7777, no security).
+4. If no setup exists, initialize using `src/qcmlforge/qca.py` conventions (port 7777, no security). Ensure the following resource config is used (not the default values):
+```
+    resources_config={
+        "update_frequency": 15,
+        "cores_per_worker": 10,
+        "max_workers": 1,
+        "memory_per_worker": 250,
+    },
+```
 5. Verify with both process checks (`pgrep`) and `qcportal.PortalClient` connectivity.
 
 Do not proceed to Phase 3 until the QCFractal instance is confirmed active and reachable.

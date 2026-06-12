@@ -32,6 +32,7 @@ def queue_manybody(
             2: qc_spec,
         },
         bsse_correction=[cp_str],
+        tag='phoenix-agent',
         keywords={},
     )
     return ids

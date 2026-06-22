@@ -30,6 +30,7 @@ _coeffs: pd.DataFrame | None = None
 
 def parse_geoms(
     path: str,
+    cp: bool,
     ) -> pd.DataFrame:
     """
     Parses through a folder containing geometries in QCElemental recognized
@@ -101,8 +102,12 @@ def parse_geoms(
                     raise ValueError("input geometry must be a dimer")
 
                 qcel_dimer.append(mol_qcel)
-                qcel_monA.append(mol_qcel.get_fragment(0))
-                qcel_monB.append(mol_qcel.get_fragment(1))
+                if cp:
+                    qcel_monA.append(mol_qcel.get_fragment(0, 1))
+                    qcel_monB.append(mol_qcel.get_fragment(1, 0))
+                else:
+                    qcel_monA.append(mol_qcel.get_fragment(0))
+                    qcel_monB.append(mol_qcel.get_fragment(1))
                 print(f"succesfully built molecule and fragments for geometry found at {filepath}")
 
     return pd.DataFrame({
@@ -180,7 +185,7 @@ def build_inference_table(
     cp_str = "/unCP"
 
     if cp:
-        print("Warning: using un-counterpoise corrected models for counterpoise corrected timing predictions")
+        # print("Warning: using un-counterpoise corrected models for counterpoise corrected timing predictions")
         cp_str = "/CP"
 
     lotr_strings = [m + "/" + b + cp_str for b in bases for m in methods] # pretty sure everything I ran was not CP-corrected
@@ -391,7 +396,7 @@ def main(
     psi4.core.be_quiet()
     psi4.set_num_threads(n_threads)
 
-    df1 = parse_geoms(geom_path)
+    df1 = parse_geoms(geom_path, using_cp)
 
     df2 = build_inference_table(df1, methods, bases, using_cp)
 

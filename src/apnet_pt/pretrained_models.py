@@ -20,6 +20,19 @@ HF_REPO_ID = "awallace3/qcmlforge"
 _DOWNLOAD_APPROVED = None
 LOGGER = logging.getLogger(__name__)
 
+_RECOVERED_DAPNET2_DIR = (
+    "/projects/cos-lab-cs207/ds/vlita3/projects/gits/AI4Science_QC/"
+    "qcml_models/dap2"
+)
+_RECOVERED_DAPNET2_AM_PATH = (
+    "/projects/cos-lab-cs207/ds/vlita3/projects/gits/QCMLForge/"
+    "models/am_ensemble/am_0.pt"
+)
+_RECOVERED_DAPNET2_AP2_PATH = (
+    "/projects/cos-lab-cs207/ds/vlita3/projects/gits/QCMLForge/"
+    "models/ap2_ensemble_06_30_2025/ap2_0.pt"
+)
+
 
 def _hf_hub_download(rel_path: str, local_files_only: bool) -> str:
     try:
@@ -682,18 +695,49 @@ def _resolve_dapnet2_pretrained_path(m1: str, m2: str) -> str:
     ) from RuntimeError("\n".join(errors))
 
 
+def _resolve_recovered_dapnet2_path(m1: str, m2: str) -> str | None:
+    model_path = os.path.join(
+        _RECOVERED_DAPNET2_DIR,
+        f"{clean_str_for_filename(m1)}_{clean_str_for_filename(m2)}.pt",
+    )
+    return model_path if os.path.isfile(model_path) else None
+
+
+def _recovered_dapnet2_backbone_paths() -> dict[str, str] | None:
+    if not (
+        os.path.isfile(_RECOVERED_DAPNET2_AM_PATH)
+        and os.path.isfile(_RECOVERED_DAPNET2_AP2_PATH)
+    ):
+        return None
+    return {
+        "am_ensemble/am_0.pt": _RECOVERED_DAPNET2_AM_PATH,
+        "ap2_ensemble/ap2_0.pt": _RECOVERED_DAPNET2_AP2_PATH,
+    }
+
+
 def dapnet2_model_predict(
     mols: list[Molecule],
     m1: str,
     m2: str,
     compile: bool = True,
     pre_trained_model_path: str = None,
+    am_model_path: str = None,
+    ap2_model_path: str = None,
+    use_recovered_stack: bool = True,
     batch_size: int = 16,
     use_GPU: bool = None,
 ) -> np.ndarray:
-    base_model_paths = _resolve_pretrained_paths(
-        ["am_ensemble/am_0.pt", "ap2_ensemble/ap2_0.pt"]
-    )
+    base_model_paths = None
+    if use_recovered_stack and am_model_path is None and ap2_model_path is None:
+        base_model_paths = _recovered_dapnet2_backbone_paths()
+    if base_model_paths is None:
+        base_model_paths = _resolve_pretrained_paths(
+            ["am_ensemble/am_0.pt", "ap2_ensemble/ap2_0.pt"]
+        )
+    if am_model_path is not None:
+        base_model_paths["am_ensemble/am_0.pt"] = am_model_path
+    if ap2_model_path is not None:
+        base_model_paths["ap2_ensemble/ap2_0.pt"] = ap2_model_path
     atom_model = AtomModels.ap2_atom_model.AtomModel(
         ds_root=None,
         ignore_database_null=True,
@@ -710,7 +754,10 @@ def dapnet2_model_predict(
     if pre_trained_model_path is None:
         if m2 != "CCSD(T)/CBS/CP":
             raise ValueError("Pretrained models only predict m2=CCSD(T)/CBS/CP")
-        pre_trained_model_path = _resolve_dapnet2_pretrained_path(m1, m2)
+        if use_recovered_stack:
+            pre_trained_model_path = _resolve_recovered_dapnet2_path(m1, m2)
+        if pre_trained_model_path is None:
+            pre_trained_model_path = _resolve_dapnet2_pretrained_path(m1, m2)
     dapnet2 = AtomPairwiseModels.dapnet2.dAPNet2Model(
         atom_model=atom_model,
         apnet2_model=apnet2,

@@ -4,6 +4,11 @@ import qcelemental as qcel
 import torch
 import pytest
 
+from apnet_pt.AtomPairwiseModels.dapnet2 import (
+    dAPNet2_MPNN,
+    dapnet_gaussian_nll_loss,
+)
+
 
 mol3 = qcel.models.Molecule.from_data(
     """
@@ -42,6 +47,33 @@ def set_weights_to_value(model, value=0.9):
     with torch.no_grad():  # Disable gradient tracking
         for param in model.parameters():
             param.fill_(value)  # Set all elements to the given value
+
+
+def test_dapnet2_mpnn_output_shape_by_loss_type():
+    h_ab = torch.ones((3, 4), dtype=torch.float32)
+    h_ba = torch.ones((3, 4), dtype=torch.float32)
+    cutoff = torch.ones((3, 1), dtype=torch.float32)
+    dimer_ind = torch.tensor([0, 0, 1], dtype=torch.long)
+
+    mse_model = dAPNet2_MPNN(n_neuron=8, loss_type="mse")
+    nll_model = dAPNet2_MPNN(n_neuron=8, loss_type="gaussian_nll")
+
+    assert mse_model(h_ab, h_ba, cutoff, dimer_ind, ndimer=2).shape == (2, 1)
+    assert nll_model(h_ab, h_ba, cutoff, dimer_ind, ndimer=2).shape == (2, 2)
+
+
+def test_dapnet_gaussian_nll_loss_matches_pytorch():
+    outputs = torch.tensor([[1.0, -0.5], [2.0, 0.25]], dtype=torch.float32)
+    target = torch.tensor([1.5, 1.25], dtype=torch.float32)
+    min_var = 1e-5
+
+    mu = outputs[:, 0]
+    var = torch.nn.functional.softplus(outputs[:, 1]) + min_var
+    expected = torch.nn.GaussianNLLLoss(eps=0.0)(mu, target, var)
+
+    assert torch.allclose(
+        dapnet_gaussian_nll_loss(outputs, target, min_var=min_var), expected
+    )
 
 
 @pytest.mark.skip("Models no longer available vi PyPI")

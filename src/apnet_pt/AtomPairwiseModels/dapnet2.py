@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from apnet_pt.util import scatter_sum_compile
 from torch_geometric.data import Data
 import numpy as np
@@ -32,6 +33,33 @@ import torch.multiprocessing as mp
 from torch.nn.parallel import DistributedDataParallel as DDP
 import qcelemental as qcel
 from copy import deepcopy
+
+
+DAPNET_LOSS_TYPES = {"mse", "gaussian_nll"}
+
+
+def _validate_dapnet_loss_type(loss_type):
+    if loss_type not in DAPNET_LOSS_TYPES:
+        raise ValueError(
+            f"Invalid dAPNet loss_type={loss_type!r}. "
+            f"Expected one of {sorted(DAPNET_LOSS_TYPES)}."
+        )
+
+
+def _dapnet_mu_var(outputs, min_var=1e-6):
+    """Split dAPNet Gaussian parameters into mean and positive variance."""
+    params = outputs.reshape(-1, 2)
+    mu = params[:, 0]
+    var = F.softplus(params[:, 1]) + min_var
+    return mu, var
+
+
+def dapnet_gaussian_nll_loss(outputs, target, min_var=1e-6):
+    """Gaussian NLL for scalar total delta-E dAPNet predictions."""
+    mu, var = _dapnet_mu_var(outputs, min_var=min_var)
+    target = target.reshape_as(mu)
+    loss_fn = nn.GaussianNLLLoss(eps=0.0)
+    return loss_fn(mu, target, var)
 
 
 class APNet2_dAPNet2_MPNN(nn.Module):
@@ -242,16 +270,20 @@ class dAPNet2_MPNN(nn.Module):
     def __init__(
         self,
         n_neuron=128,
+        loss_type="mse",
     ):
         super().__init__()
 
+        _validate_dapnet_loss_type(loss_type)
         self.n_neuron = n_neuron
+        self.loss_type = loss_type
+        self.output_dim = 2 if loss_type == "gaussian_nll" else 1
         layer_nodes_readout = [
             # n_embed,
             n_neuron * 2,
             n_neuron,
             n_neuron // 2,
-            1,
+            self.output_dim,
         ]
         layer_activations = [
             nn.ReLU(),
@@ -286,6 +318,7 @@ class dAPNet2_MPNN(nn.Module):
         """
         return {
             "n_neuron": self.n_neuron,
+            "loss_type": self.loss_type,
         }
 
     def get_model_info(self):
@@ -298,7 +331,9 @@ class dAPNet2_MPNN(nn.Module):
             name="dAPNet2_MPNN",
             role="Learns a delta correction from frozen APNet2 pair embeddings",
             inputs=["h_AB", "h_BA", "cutoff"],
-            outputs=["dE_total"],
+            outputs=["dE_total"]
+            if self.loss_type == "mse"
+            else ["dE_total_mean", "dE_total_raw_variance"],
             frozen=(n_train == 0),
             n_params=n_train,
             n_params_total=n_total,
@@ -952,7 +987,6 @@ units angstrom
     ########################################################################
     # TRAINING/VALIDATION HELPERS
     ########################################################################
-
     def __setup(self, rank, world_size):
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "12355"
@@ -1558,6 +1592,8 @@ class dAPNet2Model:
         ds_num_devices=1,
         ds_datapoint_storage_n_objects=1000,
         ds_prebatched=False,
+        loss_type="mse",
+        min_var=1e-6,
         print_lvl=0,
     ):
         """
@@ -1572,6 +1608,9 @@ class dAPNet2Model:
         else:
             device = torch.device("cpu")
             print("running on the CPU")
+        _validate_dapnet_loss_type(loss_type)
+        self.loss_type = loss_type
+        self.min_var = min_var
         self.ds_spec_type = ds_spec_type
         self.atom_model = AtomMPNN()
         self.apnet2_model = apnet2_model
@@ -1612,7 +1651,9 @@ class dAPNet2Model:
             checkpoint = torch.load(pre_trained_model_path, weights_only=False)
             self.model = dAPNet2_MPNN(
                 n_neuron=checkpoint["config"]["n_neuron"],
+                loss_type=checkpoint["config"].get("loss_type", "mse"),
             )
+            self.loss_type = self.model.loss_type
             model_state_dict = {
                 k.replace("_orig_mod.", ""): v
                 for k, v in checkpoint["model_state_dict"].items()
@@ -1621,6 +1662,7 @@ class dAPNet2Model:
         else:
             self.model = dAPNet2_MPNN(
                 n_neuron=n_neuron,
+                loss_type=loss_type,
             )
         split_dbs = [1]
         self.dataset = dataset
@@ -1939,8 +1981,10 @@ class dAPNet2Model:
         batch_size=1,
         r_cut=5.0,
         r_cut_im=8.0,
+        return_uncertainty=False,
     ) -> np.ndarray:
         predictions = np.zeros((len(mols)))
+        uncertainties = np.zeros((len(mols))) if return_uncertainty else None
         for i in range(0, len(mols) + len(mols) % batch_size + 1, batch_size):
             upper_bound = min(i + batch_size, len(mols))
             local_mols = mols[i:upper_bound]
@@ -1962,9 +2006,19 @@ class dAPNet2Model:
                 ndimer=ndimers[0],
             )
             dimer_batch.to(self.device)
-            preds = self.eval_fn(dimer_batch)
-            preds = preds.flatten()
-            predictions[i : i + batch_size] = preds.cpu().numpy()
+            outputs = self.eval_fn(dimer_batch)
+            if self.loss_type == "gaussian_nll":
+                mu, var = _dapnet_mu_var(outputs, min_var=self.min_var)
+                preds = mu
+                if return_uncertainty:
+                    uncertainties[i:upper_bound] = torch.sqrt(var).cpu().numpy()
+            else:
+                preds = outputs.flatten()
+                if return_uncertainty:
+                    uncertainties[i:upper_bound] = np.nan
+            predictions[i:upper_bound] = preds.cpu().numpy()
+        if return_uncertainty:
+            return predictions, uncertainties
         return predictions
 
     def example_input(self):
@@ -1985,6 +2039,35 @@ units angstrom
     ########################################################################
     # TRAINING/VALIDATION HELPERS
     ########################################################################
+
+    def _mean_prediction(self, outputs):
+        loss_type = getattr(self, "loss_type", "mse")
+        min_var = getattr(self, "min_var", 1e-6)
+        if loss_type == "gaussian_nll":
+            mu, _ = _dapnet_mu_var(outputs, min_var=min_var)
+            return mu
+        return outputs.flatten()
+
+    def _loss_and_errors(self, outputs, target, loss_fn=None):
+        loss_type = getattr(self, "loss_type", "mse")
+        min_var = getattr(self, "min_var", 1e-6)
+        if loss_type == "gaussian_nll":
+            preds = self._mean_prediction(outputs)
+            target = target.reshape_as(preds)
+            batch_loss = dapnet_gaussian_nll_loss(
+                outputs, target, min_var=min_var
+            )
+            return batch_loss, preds - target
+
+        preds = outputs.flatten()
+        target = target.reshape_as(preds)
+        comp_errors = preds - target
+        batch_loss = (
+            torch.mean(torch.square(comp_errors))
+            if loss_fn is None
+            else loss_fn(preds, target)
+        )
+        return batch_loss, comp_errors
 
     def __setup(self, rank, world_size):
         os.environ["MASTER_ADDR"] = "localhost"
@@ -2011,12 +2094,8 @@ units angstrom
             optimizer.zero_grad(set_to_none=True)  # minor speed-up
             batch = batch.to(rank_device, non_blocking=True)
             E_sr_dimer = self.eval_fn(batch)
-            preds = E_sr_dimer.flatten()
-            comp_errors = preds - batch.y
-            batch_loss = (
-                torch.mean(torch.square(comp_errors))
-                if (loss_fn is None)
-                else loss_fn(preds, batch.y)
+            batch_loss, comp_errors = self._loss_and_errors(
+                E_sr_dimer, batch.y, loss_fn=loss_fn
             )
             batch_loss.backward()
             optimizer.step()
@@ -2038,9 +2117,10 @@ units angstrom
             for n, batch in enumerate(dataloader):
                 batch = batch.to(rank_device, non_blocking=True)
                 E_sr_dimer = self.eval_fn(batch)
-                preds = E_sr_dimer.flatten()
                 try:
-                    comp_errors = preds - batch.y
+                    batch_loss, comp_errors = self._loss_and_errors(
+                        E_sr_dimer, batch.y, loss_fn=loss_fn
+                    )
                 except Exception as e:
                     print(f"Error in batch {n}: {e}")
                     print(batch)
@@ -2048,11 +2128,6 @@ units angstrom
                     print(batch.qA)
                     print(batch.dimer_ind)
                     raise e
-                batch_loss = (
-                    torch.mean(torch.square(comp_errors))
-                    if (loss_fn is None)
-                    else loss_fn(preds, batch.y)
-                )
                 total_loss += batch_loss.item()
                 comp_errors_t.append(comp_errors.detach().cpu())
         comp_errors_t = torch.cat(comp_errors_t, dim=0)

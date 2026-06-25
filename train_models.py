@@ -218,6 +218,9 @@ def train_pairwise_model(
     freeze_atom_model=True,
     build_dataset_only=False,
     include_total_mse=False,
+    loss_type="mse",
+    min_var=1e-6,
+    dapnet_pretrained_model_path=None,
 ):
     # Ensure param_start_mean and param_start_std are lists
     """
@@ -259,6 +262,9 @@ def train_pairwise_model(
         no_disp_nn (bool): Skip the dispersion readout when training APNet3-fused-d3 and compute D3 at predict time instead.
         build_dataset_only (bool): If true, build/process the dataset and exit without training.
         include_total_mse (bool): If true, add an extra MSE term on the total energy in addition to the four component-wise terms.
+        loss_type (str): Loss for supported models. dAPNet2 supports "mse" and "gaussian_nll".
+        min_var (float): Minimum Gaussian variance for dAPNet2 NLL training.
+        dapnet_pretrained_model_path (str or None): Optional dAPNet2 checkpoint to resume from.
 
     """
     if not isinstance(param_start_mean, (list, tuple)):
@@ -338,7 +344,17 @@ def train_pairwise_model(
     print("World Size", world_size)
 
     omp_num_threads_per_process = 8
-    if os.path.exists(model_out) and pre_trained_model_path is None:
+    if apnet_model_type.startswith("dAPNet"):
+        if dapnet_pretrained_model_path is not None:
+            pretrained_model = dapnet_pretrained_model_path
+            print(f"\nTraining dAPNet from {dapnet_pretrained_model_path}\n")
+        elif os.path.exists(model_out):
+            pretrained_model = model_out
+            print(f"\nTraining dAPNet from {model_out}\n")
+        else:
+            pretrained_model = None
+            print("\nTraining dAPNet from scratch...\n")
+    elif os.path.exists(model_out) and pre_trained_model_path is None:
         pretrained_model = model_out
         print(f"\nTraining from {model_out}\n")
     elif pre_trained_model_path is not None:
@@ -367,6 +383,8 @@ def train_pairwise_model(
             ds_prebatched=True,
             ds_m1=m1,
             ds_m2=m2,
+            loss_type=loss_type,
+            min_var=min_var,
         )
     elif apnet_model_type in ["AM-DimerParam"]:
         if (
@@ -722,6 +740,12 @@ def main():
         help="Load AP2 pretrained weights for AP3 model initialization (path to AP2 model)",
     )
     args.add_argument(
+        "--dapnet_pretrained_model_path",
+        type=str,
+        default=None,
+        help="Optional dAPNet2 checkpoint to resume from; --ap_pretrained_model_path remains the AP2 backbone path for dAPNet2.",
+    )
+    args.add_argument(
         "--train_am",
         type=str,
         default="",
@@ -938,6 +962,19 @@ def main():
         ),
     )
     args.add_argument(
+        "--loss_type",
+        type=str,
+        default="mse",
+        choices=["mse", "gaussian_nll"],
+        help="Loss type for supported models. dAPNet2 supports mse and gaussian_nll (default: mse).",
+    )
+    args.add_argument(
+        "--min_var",
+        type=float,
+        default=1e-6,
+        help="Minimum Gaussian variance for dAPNet2 gaussian_nll training (default: 1e-6).",
+    )
+    args.add_argument(
         "--no_disp_nn",
         action="store_true",
         default=False,
@@ -1029,6 +1066,9 @@ def main():
             freeze_atom_model=not args.unfreeze_atom_model,
             build_dataset_only=args.build_dataset_only,
             include_total_mse=args.include_total_mse,
+            loss_type=args.loss_type,
+            min_var=args.min_var,
+            dapnet_pretrained_model_path=args.dapnet_pretrained_model_path,
         )
     return
 

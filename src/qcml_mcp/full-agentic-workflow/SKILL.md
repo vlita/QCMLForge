@@ -2,18 +2,18 @@
 name: full-agentic-workflow
 description: >-
   Use this skill when the user explicitly asks for "full-agentic-workflow".
-  This skill runs an end-to-end quantum chemistry pipeline: (1) recommend a level of theory (LoT) via select-LoT given a geometry directory and compute budget,
-  (2) start or verify a local QCFractal instance, (3) queue manybody computations on the user-requested/budget-feasible LoTs and retrieve results,
-  (4) extract CP-corrected interaction energies, convert Hartree to kcal/mol, sum Psi4 walltimes from child outputs, and (5) compute signed errors against a user-provided reference when provided.
+  This skill runs an end-to-end quantum chemistry pipeline: (1) classify user-provided or budget-feasible levels of theory (LoTs) into high/medium/low predicted-accuracy buckets via select-LoT given a geometry directory, compute budget, and reference interaction energies,
+  (2) ask the user which classified LoTs they want to compute unless they already specified the exact set, (3) start or verify a local QCFractal instance, (4) queue manybody computations on the user-selected LoTs and retrieve results,
+  (5) extract CP-corrected interaction energies, convert Hartree to kcal/mol, sum Psi4 walltimes from child outputs, and (6) compute signed errors against a user-provided reference when provided.
   The pipeline uses two conda environments: qcml for select-LoT, and p4_qcml for QCFractal operations.
 ---
 
 # full-agentic-workflow
 
 End-to-end quantum chemistry workflow that chains together three sub-skills:
-1. **select-LoT** — predict IE errors and timings, filter by budget, recommend best LoT
+1. **select-LoT** — predict IE errors and timings, filter by budget, classify LoTs into predicted-accuracy buckets
 2. **connect-qcf** — start/verify a local QCFractal instance
-3. **run-IEs** — queue and retrieve manybody interaction energies for user-requested/budget-feasible LoTs
+3. **run-IEs** — queue and retrieve manybody interaction energies for user-selected LoTs
 4. **Post-process** — extract CP-corrected energies, convert to kcal/mol, sum Psi4 walltimes, compute signed errors vs reference when provided
 
 ## When to use
@@ -59,9 +59,10 @@ Use these rules:
 
 - **Geometry input**: Path to either a directory of dimer geometry files or a single dimer geometry file accepted by `src/qcml_mcp/ie_time_esimator_script.py`. If the user gives one file, create/use a temporary workflow directory containing that file because `parse_geoms()` expects a directory.
 - **Compute budget**: Walltime in seconds (not CPU-seconds).
-- **Reference energies**: Optional unless the user asks for signed errors. Interaction energies may be provided in any format (CSV, text, dataframe, screenshot). The model is responsible for parsing these into a usable format.
+- **Reference energies**: Required for LoT accuracy bucketing and optional only when the user explicitly wants budget/timing filtering without accuracy classes. Interaction energies may be provided in any format (CSV, text, dataframe, screenshot). The model is responsible for parsing these into a usable format.
 - **Optional**: List of QM methods and basis sets. Defaults to all 10 methods and 6 basis sets if not specified.
 - **Optional**: Counterpoise correction (`using_cp`). Defaults to True. When True, the IE predictions use CP-corrected models. Note this affects the interaction energies, not the timing model.
+- **Working Directory**: Path to an empty directory in which workflow files are to be saved. DO NOT attempt to work in/inspect files outside of this directory, unless they are explicitly mentioned here. 
 
 ## Phase 1: select-LoT (qcml environment)
 
@@ -100,6 +101,13 @@ This returns a dataframe with columns including:
 
 ### Step 2: Save the full dataframe
 
+Before saving, normalize the select-LoT predicted error sign exactly once. Keep the raw model output column unchanged for provenance, and create one flipped column for all downstream comparisons:
+```python
+df["predicted_ie_error_kcalmol_for_bucketing"] = -df["ERROR ESTIMATES (kcal/mol)"]
+```
+
+Use `predicted_ie_error_kcalmol_for_bucketing` for all reference comparisons, percent-error calculations, bucket assignment, and rankings. Do not flip this column again later in the workflow.
+
 Save to `select_lot_df.pkl` in the current working directory.
 
 ### Step 3: Filter by budget
@@ -111,17 +119,38 @@ df["walltime_seconds"] = 10 ** df["ESTIMATED CPU TIMES (log10(s))"]
 
 Filter to rows where `walltime_seconds <= <user_budget>`. If no rows remain, report that no LoT fits the budget and wait for user input.
 
-### Step 4: Recommend the best LoT
+### Step 4: Classify LoTs into predicted-accuracy buckets
 
-For each system (group by `id`), find the LoT with the minimum absolute error among budget-feasible rows. Count how many systems each LoT wins. Choose the LoT with the largest count.
+Do not reduce the workflow to a single optimal LoT recommendation. Instead, classify the user-provided or budget-feasible LoTs into predicted-accuracy buckets relative to the user-provided reference interaction energies.
 
-Tie-breakers: lowest median absolute error, then lowest median walltime.
+First merge the reference interaction energies onto the budget-feasible dataframe by `id`. The reference value must be in kcal/mol. If references are missing for any `id`, report the missing systems and ask the user before assigning accuracy buckets.
 
-This recommendation is informational — it tells the user which LoT is predicted to be best. All LoTs proceed to computation.
+For the percent-error calculation, use the normalized flipped select-LoT predicted error column created in Step 2:
+```python
+df["predicted_abs_percent_error"] = (
+    100
+    * df["predicted_ie_error_kcalmol_for_bucketing"].abs()
+    / df["reference_ie"].abs()
+)
+```
+
+Use `abs(reference_ie)` in the denominator so percent errors are non-negative for attractive interactions with negative reference energies. If any reference interaction energy is zero or near-zero, do not compute a percent error for that system without asking the user how to handle it.
+
+Assign buckets per row:
+- `high_accuracy`: `predicted_abs_percent_error < 2`
+- `medium_accuracy`: `2 <= predicted_abs_percent_error < 5`
+- `low_accuracy`: `5 <= predicted_abs_percent_error < 10`
+- `not_recommended`: `predicted_abs_percent_error >= 10`
+
+Classify each LoT separately for each system. When summarizing across many systems, report how many systems fall into `high_accuracy`, `medium_accuracy`, `low_accuracy`, and `not_recommended` for each LoT, along with the median predicted absolute percent error. Do not collapse mixed performance into one overall bucket label unless the user explicitly asks for one.
+
+Do not recommend LoTs in `not_recommended`. If every feasible LoT is `not_recommended`, report that no LoT meets the predicted accuracy threshold and ask the user whether to expand the method/basis set search, increase the budget, or proceed for diagnostic purposes only.
+
+After presenting the buckets, ask the user which LoTs they want to compute as real QCFractal jobs. Do not assume that all high/medium/low LoTs should be queued. The user may choose all LoTs in one bucket, a subset across buckets, or diagnostic `not_recommended` LoTs. Only skip this prompt if the user already explicitly said to queue a specific set of LoTs or to queue all feasible/requested LoTs.
 
 ### Step 5: Build the submission dataframe
 
-The submission dataframe is the budget-feasible subset unless the user explicitly asks to run all requested LoTs for verification. If the user provided an explicit LoT list and asked to run all calculations, submit those exact LoTs even if the select-LoT recommendation is only one row.
+The submission dataframe is the user-selected subset from the budget-feasible/classified rows. Do not queue anything until the user has chosen which LoTs to compute, unless they already explicitly provided that choice. If the user selects `not_recommended` LoTs or asks to run all calculations, submit those exact LoTs but clearly label those rows so they are not presented as recommendations.
 
 The dataframe already contains all needed data. However, **do not include qcelemental Molecule objects** when moving between environments — they may not survive the environment switch. Instead:
 
@@ -200,6 +229,16 @@ df["qcel_dimer"] = df["id"].map(mol_map)
 ```
 
 ### Step 2: Queue manybody computations
+
+Before queueing new computations, check whether matching manybody records already exist in the connected QCFractal server for the same molecule/fragments, method, basis, program/specification, and CP/noCP correction choice. QCFractal may deduplicate equivalent submissions and return existing record IDs, but do not rely on accidental duplicate submission as the lookup mechanism.
+
+If matching records already exist:
+- Attach the existing QCFractal record IDs to the dataframe.
+- Retrieve completed records immediately when they are already `complete`.
+- For existing `waiting` or `running` records, reuse those IDs and report their status instead of queueing fresh computations.
+- For existing `error` records, report the error and ask whether to reset/retry them; prefer `client.reset_records()` over submitting duplicate jobs when the user wants to retry transient failures.
+
+Only queue fresh manybody computations for rows where no matching record exists or where the user explicitly asks for a new independent computation.
 
 ```python
 import importlib.util
@@ -299,14 +338,11 @@ Psi4 wall time for execution: 0:01:10.35
 
 Sum the parsed seconds across the child singlepoints for the manybody record and write the total to `mb_wall_time` in seconds. Also write the child stdout/stderr payloads into `psi4 output` and, when useful for inspection, export them to `psi4_outputs/` with a manifest.
 
-### Step 5: Flip sign of select-LoT predictions only when needed
+### Step 5: Use the already-flipped select-LoT prediction column
 
-The `ERROR ESTIMATES (kcal/mol)` column from select-LoT uses a sign convention that requires flipping:
-```python
-df["ERROR ESTIMATES (kcal/mol)"] = -df["ERROR ESTIMATES (kcal/mol)"]
-```
+The `ERROR ESTIMATES (kcal/mol)` column from select-LoT uses a sign convention that requires flipping before comparing predicted errors to reference interaction energies or computing predicted percent-error buckets. That flip should already have happened once in Phase 1 Step 2 into `predicted_ie_error_kcalmol_for_bucketing`.
 
-Do not blindly flip twice. If the dataframe was produced by the user or already post-processed, inspect/ask before modifying the sign.
+Do not mutate `ERROR ESTIMATES (kcal/mol)` in place, and do not flip `predicted_ie_error_kcalmol_for_bucketing` again. If the dataframe was produced by the user and does not contain `predicted_ie_error_kcalmol_for_bucketing`, inspect/ask before creating it so the sign is not normalized twice.
 
 ### Step 6: Compute signed errors
 
@@ -318,9 +354,14 @@ Round the final value so that it has the same number of decimal places as the le
 
 Positive error means the predicted binding is weaker than reference (underbinding). Negative means overbinding.
 
+If reporting actual post-computation percent errors, compute them from the retrieved QCFractal interaction energies, not the select-LoT predicted error:
+```python
+df["actual_abs_percent_error"] = 100 * df["IE_error_kcalmol"].abs() / df["reference_ie"].abs()
+```
+
 ### Step 7: Save the final dataframe
 
-Save as `full_workflow_results.pkl`. Include at minimum: `id`, `Level of Theory`, `mb_interaction_energy`, `mb_interaction_energy_kcalmol`, `reference_ie` when provided, `IE_error_kcalmol` when computable, `walltime_seconds` or `ESTIMATED CPU TIMES (log10(s))`, and `mb_wall_time`.
+Save as `full_workflow_results.pkl`. Include at minimum: `id`, `Level of Theory`, `mb_interaction_energy`, `mb_interaction_energy_kcalmol`, `reference_ie` when provided, `IE_error_kcalmol` when computable, `predicted_ie_error_kcalmol_for_bucketing` when available, `predicted_abs_percent_error` when available, `accuracy_bucket` when available, `walltime_seconds` or `ESTIMATED CPU TIMES (log10(s))`, and `mb_wall_time`.
 
 Before declaring the dataframe complete, check that required columns are present and non-null for every row: `qcfractal id`, `job status`, `mb_interaction_energy`, `mb_interaction_energy_kcalmol`, `mb_wall_time`, and `psi4 output`. All QCFractal statuses should be `complete` unless the user explicitly accepts partial/error rows.
 
@@ -329,15 +370,15 @@ Before declaring the dataframe complete, check that required columns are present
 Always provide:
 
 1. **Printed report** including:
-   - The recommended LoT from Phase 1
+   - The Phase 1 LoT accuracy buckets (`high_accuracy`, `medium_accuracy`, `low_accuracy`, `not_recommended`) with counts and median predicted absolute percent error
    - Budget used and how many LoTs were feasible
    - QCFractal connection status
    - Number of manybody jobs submitted (total across all systems × LoTs)
    - On re-query: predicted completion percentages per job
    - After completion: completed vs errored counts
     - Summary statistics of errors vs reference when reference data is available (mean, median, max, min signed error)
-    - A short table of per-system errors for the recommended LoT when reference data is available
-    - Final ranking by predicted absolute error and actual `mb_wall_time`
+     - A short table of per-system predicted percent errors and buckets when reference data is available
+     - Final ranking by predicted absolute percent error and actual `mb_wall_time`, excluding `not_recommended` LoTs from recommendations unless the user explicitly asks to see them
 
 2. **Saved files**:
    - `select_lot_df.pkl` — full select-LoT prediction dataframe
@@ -350,7 +391,7 @@ Always provide:
 
 This workflow is **not** a single continuous execution. It spans multiple user interactions:
 
-1. **First invocation**: Run Phase 1 → Phase 2 → Phase 3 (submit only, then exit).
+1. **First invocation**: Run Phase 1, present LoT buckets, ask the user which LoTs to compute, then stop unless the user already gave an explicit queueing choice. After the user chooses LoTs, run Phase 2 → Phase 3 (submit only, then exit).
 2. **Subsequent re-queries**: Run Phase 3 Step 4 (status check, report, exit).
 3. **Final invocation**: When jobs are complete, run Phase 3 Step 5 + Phase 4 (retrieve, post-process, report).
 

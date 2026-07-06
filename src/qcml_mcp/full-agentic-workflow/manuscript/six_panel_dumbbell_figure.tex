@@ -1,0 +1,399 @@
+\documentclass[10pt]{article}
+\usepackage[paperwidth=12in,paperheight=14in,margin=0.35in]{geometry}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usetikzlibrary{calc}
+\pgfplotsset{compat=1.18}
+
+\pagestyle{empty}
+\definecolor{refColor}{HTML}{222222}
+\definecolor{predColor}{HTML}{1F77B4}
+\definecolor{lineColor}{HTML}{7A7A7A}
+\definecolor{methodColor0}{HTML}{F1BB7B}
+\definecolor{methodColor1}{HTML}{FD6467}
+\definecolor{methodColor2}{HTML}{5B1A18}
+\definecolor{methodColor3}{HTML}{D67236}
+\definecolor{methodColor4}{HTML}{E6A0C4}
+\definecolor{methodColor5}{HTML}{C6CDF7}
+\definecolor{methodColor6}{HTML}{7294D4}
+\tikzset{
+  dumbbellLine/.style={line width=0.75pt, lineColor},
+  refLine/.style={line width=0.55pt, dashed, refColor},
+  refDot/.style={circle, draw=white, fill=refColor, minimum size=3.8pt, inner sep=0pt},
+  predDot/.style={circle, draw=white, fill=predColor, minimum size=4.5pt, inner sep=0pt},
+  methodLabel/.style={anchor=west, font=\scriptsize\sffamily, text=black},
+  valueLabel/.style={font=\scriptsize\sffamily, text=black},
+  refLabel/.style={anchor=south, font=\scriptsize\sffamily, text=refColor, fill=white, inner sep=1pt},
+  panelTitle/.style={font=\bfseries\small\sffamily},
+  placeholderBox/.style={draw=gray!55, fill=gray!7, rounded corners=2pt, line width=0.45pt},
+  placeholderText/.style={font=\scriptsize\sffamily, text=gray!65},
+}
+
+\begin{document}
+\centering
+\vspace{0.45em}
+\begin{tabular}{@{}cc@{}}
+\resizebox{0.46\textwidth}{!}{%
+\begin{tikzpicture}
+\node[anchor=north west, inner sep=0pt] (img) at (-0.05cm,-0.10cm) {%
+  \IfFileExists{L14_new/C2C2PD.png}{%
+    \includegraphics[width=3.00cm]{L14_new/C2C2PD.png}%
+  }{%
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \draw[placeholderBox] (0,0) rectangle (1.75,1.35);
+      \node[placeholderText] at (0.875,0.76) {molecule};
+      \node[placeholderText] at (0.875,0.50) {C2C2PD};
+    \end{tikzpicture}%
+  }%
+};
+\begin{axis}[
+  at={(2.95cm,-0.02cm)},
+  anchor=north west,
+  width=5.75cm,
+  height=3.95cm,
+  xmin=-26.662, xmax=-15.850,
+  ymin=0.35, ymax=6.550,
+  axis x line*=bottom,
+  axis y line=none,
+  xlabel={},
+  xtick={-24.650,-22.650,-20.650,-18.650,-16.650},
+  xticklabels={{-4},{-2},{0},{+2},{+4}},
+  xticklabel style={font=\scriptsize\sffamily, rotate=0, anchor=north},
+  xlabel style={font=\tiny\sffamily, yshift=1pt},
+  tick align=outside,
+  ytick=\empty,
+  clip=false,
+  grid=major,
+  major grid style={gray!18},
+]
+\draw[refLine] (axis cs:-20.650,0.45) -- (axis cs:-20.650,6.450);
+\node[refLabel] at (axis cs:-20.650,6.550) {ref. -20.65};
+\draw[dumbbellLine] (axis cs:-20.650,1) -- (axis cs:-20.255,1);
+\node[refDot] at (axis cs:-20.650,1) {};
+\node[predDot, fill=methodColor0] at (axis cs:-20.255,1) {};
+\draw[dumbbellLine] (axis cs:-20.650,2) -- (axis cs:-20.237,2);
+\node[refDot] at (axis cs:-20.650,2) {};
+\node[predDot, fill=methodColor1] at (axis cs:-20.237,2) {};
+\draw[dumbbellLine] (axis cs:-20.650,3) -- (axis cs:-21.581,3);
+\node[refDot] at (axis cs:-20.650,3) {};
+\node[predDot, fill=methodColor2] at (axis cs:-21.581,3) {};
+\draw[dumbbellLine] (axis cs:-20.650,4) -- (axis cs:-22.447,4);
+\node[refDot] at (axis cs:-20.650,4) {};
+\node[predDot, fill=methodColor3] at (axis cs:-22.447,4) {};
+\draw[dumbbellLine] (axis cs:-20.650,5) -- (axis cs:-21.860,5);
+\node[refDot] at (axis cs:-20.650,5) {};
+\node[predDot, fill=methodColor4] at (axis cs:-21.860,5) {};
+\draw[dumbbellLine] (axis cs:-20.650,6) -- (axis cs:-25.862,6);
+\node[refDot] at (axis cs:-20.650,6) {};
+\node[predDot, fill=methodColor5] at (axis cs:-25.862,6) {};
+\end{axis}
+\node[panelTitle, anchor=north west] at (0.0cm,0.28cm) {C2C2PD};
+\end{tikzpicture}
+} & \resizebox{0.46\textwidth}{!}{%
+\begin{tikzpicture}
+\node[anchor=north west, inner sep=0pt] (img) at (0.05cm,-0.55cm) {%
+  \IfFileExists{L14_new/C3A.png}{%
+    \includegraphics[width=3.00cm]{L14_new/C3A.png}%
+  }{%
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \draw[placeholderBox] (0,0) rectangle (1.75,1.35);
+      \node[placeholderText] at (0.875,0.76) {molecule};
+      \node[placeholderText] at (0.875,0.50) {C3A};
+    \end{tikzpicture}%
+  }%
+};
+\begin{axis}[
+  at={(2.95cm,-0.02cm)},
+  anchor=north west,
+  width=5.75cm,
+  height=3.95cm,
+  xmin=-21.386, xmax=-11.540,
+  ymin=0.35, ymax=7.550,
+  axis x line*=bottom,
+  axis y line=none,
+  xlabel={},
+  xtick={-20.340,-18.340,-16.340,-14.340,-12.340},
+  xticklabels={{-4},{-2},{0},{+2},{+4}},
+  xticklabel style={font=\scriptsize\sffamily, rotate=0, anchor=north},
+  xlabel style={font=\tiny\sffamily, yshift=1pt},
+  tick align=outside,
+  ytick=\empty,
+  clip=false,
+  grid=major,
+  major grid style={gray!18},
+]
+\draw[refLine] (axis cs:-16.340,0.45) -- (axis cs:-16.340,7.450);
+\node[refLabel] at (axis cs:-16.340,7.550) {ref. -16.34};
+\draw[dumbbellLine] (axis cs:-16.340,1) -- (axis cs:-13.647,1);
+\node[refDot] at (axis cs:-16.340,1) {};
+\node[predDot, fill=methodColor0] at (axis cs:-13.647,1) {};
+\draw[dumbbellLine] (axis cs:-16.340,2) -- (axis cs:-17.069,2);
+\node[refDot] at (axis cs:-16.340,2) {};
+\node[predDot, fill=methodColor1] at (axis cs:-17.069,2) {};
+\draw[dumbbellLine] (axis cs:-16.340,3) -- (axis cs:-16.480,3);
+\node[refDot] at (axis cs:-16.340,3) {};
+\node[predDot, fill=methodColor2] at (axis cs:-16.480,3) {};
+\draw[dumbbellLine] (axis cs:-16.340,4) -- (axis cs:-17.040,4);
+\node[refDot] at (axis cs:-16.340,4) {};
+\node[predDot, fill=methodColor3] at (axis cs:-17.040,4) {};
+\draw[dumbbellLine] (axis cs:-16.340,5) -- (axis cs:-17.169,5);
+\node[refDot] at (axis cs:-16.340,5) {};
+\node[predDot, fill=methodColor4] at (axis cs:-17.169,5) {};
+\draw[dumbbellLine] (axis cs:-16.340,6) -- (axis cs:-20.586,6);
+\node[refDot] at (axis cs:-16.340,6) {};
+\node[predDot, fill=methodColor5] at (axis cs:-20.586,6) {};
+\draw[dumbbellLine] (axis cs:-16.340,7) -- (axis cs:-17.639,7);
+\node[refDot] at (axis cs:-16.340,7) {};
+\node[predDot, fill=methodColor6] at (axis cs:-17.639,7) {};
+\end{axis}
+\node[panelTitle, anchor=north west] at (0.0cm,0.28cm) {C3A};
+\end{tikzpicture}
+} \\[1.0em]
+\resizebox{0.46\textwidth}{!}{%
+\begin{tikzpicture}
+\node[anchor=north west, inner sep=0pt] (img) at (0.05cm,-0.45cm) {%
+  \IfFileExists{L14_new/CBH.png}{%
+    \includegraphics[width=3.00cm]{L14_new/CBH.png}%
+  }{%
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \draw[placeholderBox] (0,0) rectangle (1.75,1.35);
+      \node[placeholderText] at (0.875,0.76) {molecule};
+      \node[placeholderText] at (0.875,0.50) {CBH};
+    \end{tikzpicture}%
+  }%
+};
+\begin{axis}[
+  at={(2.95cm,-0.02cm)},
+  anchor=north west,
+  width=5.75cm,
+  height=3.95cm,
+  xmin=-15.860, xmax=-6.260,
+  ymin=0.35, ymax=7.550,
+  axis x line*=bottom,
+  axis y line=none,
+  xlabel={},
+  xtick={-15.060,-13.060,-11.060,-9.060,-7.060},
+  xticklabels={{-4},{-2},{0},{+2},{+4}},
+  xticklabel style={font=\scriptsize\sffamily, rotate=0, anchor=north},
+  xlabel style={font=\tiny\sffamily, yshift=1pt},
+  tick align=outside,
+  ytick=\empty,
+  clip=false,
+  grid=major,
+  major grid style={gray!18},
+]
+\draw[refLine] (axis cs:-11.060,0.45) -- (axis cs:-11.060,7.450);
+\node[refLabel] at (axis cs:-11.060,7.550) {ref. -11.06};
+\draw[dumbbellLine] (axis cs:-11.060,1) -- (axis cs:-12.266,1);
+\node[refDot] at (axis cs:-11.060,1) {};
+\node[predDot, fill=methodColor0] at (axis cs:-12.266,1) {};
+\draw[dumbbellLine] (axis cs:-11.060,2) -- (axis cs:-10.365,2);
+\node[refDot] at (axis cs:-11.060,2) {};
+\node[predDot, fill=methodColor1] at (axis cs:-10.365,2) {};
+\draw[dumbbellLine] (axis cs:-11.060,3) -- (axis cs:-11.878,3);
+\node[refDot] at (axis cs:-11.060,3) {};
+\node[predDot, fill=methodColor2] at (axis cs:-11.878,3) {};
+\draw[dumbbellLine] (axis cs:-11.060,4) -- (axis cs:-10.801,4);
+\node[refDot] at (axis cs:-11.060,4) {};
+\node[predDot, fill=methodColor3] at (axis cs:-10.801,4) {};
+\draw[dumbbellLine] (axis cs:-11.060,5) -- (axis cs:-12.279,5);
+\node[refDot] at (axis cs:-11.060,5) {};
+\node[predDot, fill=methodColor4] at (axis cs:-12.279,5) {};
+\draw[dumbbellLine] (axis cs:-11.060,6) -- (axis cs:-11.516,6);
+\node[refDot] at (axis cs:-11.060,6) {};
+\node[predDot, fill=methodColor5] at (axis cs:-11.516,6) {};
+\draw[dumbbellLine] (axis cs:-11.060,7) -- (axis cs:-11.872,7);
+\node[refDot] at (axis cs:-11.060,7) {};
+\node[predDot, fill=methodColor6] at (axis cs:-11.872,7) {};
+\end{axis}
+\node[panelTitle, anchor=north west] at (0.0cm,0.28cm) {CBH};
+\end{tikzpicture}
+} & \resizebox{0.46\textwidth}{!}{%
+\begin{tikzpicture}
+\node[anchor=north west, inner sep=0pt] (img) at (0.20cm,-0.10cm) {%
+  \IfFileExists{L14_new/2a.png}{%
+    \includegraphics[width=2.70cm]{L14_new/2a.png}%
+  }{%
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \draw[placeholderBox] (0,0) rectangle (1.75,1.35);
+      \node[placeholderText] at (0.875,0.76) {molecule};
+      \node[placeholderText] at (0.875,0.50) {2a};
+    \end{tikzpicture}%
+  }%
+};
+\begin{axis}[
+  at={(2.95cm,-0.02cm)},
+  anchor=north west,
+  width=5.75cm,
+  height=3.95cm,
+  xmin=-39.477, xmax=-29.350,
+  ymin=0.35, ymax=7.550,
+  axis x line*=bottom,
+  axis y line=none,
+  xlabel={},
+  xtick={-38.150,-36.150,-34.150,-32.150,-30.150},
+  xticklabels={{-4},{-2},{0},{+2},{+4}},
+  xticklabel style={font=\scriptsize\sffamily, rotate=0, anchor=north},
+  xlabel style={font=\tiny\sffamily, yshift=1pt},
+  tick align=outside,
+  ytick=\empty,
+  clip=false,
+  grid=major,
+  major grid style={gray!18},
+]
+\draw[refLine] (axis cs:-34.150,0.45) -- (axis cs:-34.150,7.450);
+\node[refLabel] at (axis cs:-34.150,7.550) {ref. -34.15};
+\draw[dumbbellLine] (axis cs:-34.150,1) -- (axis cs:-36.526,1);
+\node[refDot] at (axis cs:-34.150,1) {};
+\node[predDot, fill=methodColor0] at (axis cs:-36.526,1) {};
+\draw[dumbbellLine] (axis cs:-34.150,2) -- (axis cs:-35.685,2);
+\node[refDot] at (axis cs:-34.150,2) {};
+\node[predDot, fill=methodColor1] at (axis cs:-35.685,2) {};
+\draw[dumbbellLine] (axis cs:-34.150,3) -- (axis cs:-36.383,3);
+\node[refDot] at (axis cs:-34.150,3) {};
+\node[predDot, fill=methodColor2] at (axis cs:-36.383,3) {};
+\draw[dumbbellLine] (axis cs:-34.150,4) -- (axis cs:-37.713,4);
+\node[refDot] at (axis cs:-34.150,4) {};
+\node[predDot, fill=methodColor3] at (axis cs:-37.713,4) {};
+\draw[dumbbellLine] (axis cs:-34.150,5) -- (axis cs:-38.677,5);
+\node[refDot] at (axis cs:-34.150,5) {};
+\node[predDot, fill=methodColor4] at (axis cs:-38.677,5) {};
+\draw[dumbbellLine] (axis cs:-34.150,6) -- (axis cs:-36.011,6);
+\node[refDot] at (axis cs:-34.150,6) {};
+\node[predDot, fill=methodColor5] at (axis cs:-36.011,6) {};
+\draw[dumbbellLine] (axis cs:-34.150,7) -- (axis cs:-37.130,7);
+\node[refDot] at (axis cs:-34.150,7) {};
+\node[predDot, fill=methodColor6] at (axis cs:-37.130,7) {};
+\end{axis}
+\node[panelTitle, anchor=north west] at (0.0cm,0.28cm) {2a};
+\end{tikzpicture}
+} \\[1.0em]
+\resizebox{0.46\textwidth}{!}{%
+\begin{tikzpicture}
+\node[anchor=north west, inner sep=0pt] (img) at (0.15cm,-0.15cm) {%
+  \IfFileExists{L14_new/S8-2.png}{%
+    \includegraphics[width=2.50cm]{L14_new/S8-2.png}%
+  }{%
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \draw[placeholderBox] (0,0) rectangle (1.75,1.35);
+      \node[placeholderText] at (0.875,0.76) {molecule};
+      \node[placeholderText] at (0.875,0.50) {S8-2};
+    \end{tikzpicture}%
+  }%
+};
+\begin{axis}[
+  at={(2.95cm,-0.02cm)},
+  anchor=north west,
+  width=5.75cm,
+  height=3.95cm,
+  xmin=-35.590, xmax=-25.990,
+  ymin=0.35, ymax=7.550,
+  axis x line*=bottom,
+  axis y line=none,
+  xlabel={},
+  xtick={-34.790,-32.790,-30.790,-28.790,-26.790},
+  xticklabels={{-4},{-2},{0},{+2},{+4}},
+  xticklabel style={font=\scriptsize\sffamily, rotate=0, anchor=north},
+  xlabel style={font=\tiny\sffamily, yshift=1pt},
+  tick align=outside,
+  ytick=\empty,
+  clip=false,
+  grid=major,
+  major grid style={gray!18},
+]
+\draw[refLine] (axis cs:-30.790,0.45) -- (axis cs:-30.790,7.450);
+\node[refLabel] at (axis cs:-30.790,7.550) {ref. -30.79};
+\draw[dumbbellLine] (axis cs:-30.790,1) -- (axis cs:-33.828,1);
+\node[refDot] at (axis cs:-30.790,1) {};
+\node[predDot, fill=methodColor0] at (axis cs:-33.828,1) {};
+\draw[dumbbellLine] (axis cs:-30.790,2) -- (axis cs:-31.788,2);
+\node[refDot] at (axis cs:-30.790,2) {};
+\node[predDot, fill=methodColor1] at (axis cs:-31.788,2) {};
+\draw[dumbbellLine] (axis cs:-30.790,3) -- (axis cs:-31.152,3);
+\node[refDot] at (axis cs:-30.790,3) {};
+\node[predDot, fill=methodColor2] at (axis cs:-31.152,3) {};
+\draw[dumbbellLine] (axis cs:-30.790,4) -- (axis cs:-31.353,4);
+\node[refDot] at (axis cs:-30.790,4) {};
+\node[predDot, fill=methodColor3] at (axis cs:-31.353,4) {};
+\draw[dumbbellLine] (axis cs:-30.790,5) -- (axis cs:-32.605,5);
+\node[refDot] at (axis cs:-30.790,5) {};
+\node[predDot, fill=methodColor4] at (axis cs:-32.605,5) {};
+\draw[dumbbellLine] (axis cs:-30.790,6) -- (axis cs:-34.741,6);
+\node[refDot] at (axis cs:-30.790,6) {};
+\node[predDot, fill=methodColor5] at (axis cs:-34.741,6) {};
+\draw[dumbbellLine] (axis cs:-30.790,7) -- (axis cs:-32.973,7);
+\node[refDot] at (axis cs:-30.790,7) {};
+\node[predDot, fill=methodColor6] at (axis cs:-32.973,7) {};
+\end{axis}
+\node[panelTitle, anchor=north west] at (0.0cm,0.28cm) {S8-2};
+\end{tikzpicture}
+} & \resizebox{0.46\textwidth}{!}{%
+\begin{tikzpicture}
+\node[anchor=north west, inner sep=0pt] (img) at (0.25cm,-0.10cm) {%
+  \IfFileExists{L14_new/Da2.png}{%
+    \includegraphics[width=2.70cm]{L14_new/Da2.png}%
+  }{%
+    \begin{tikzpicture}[x=1cm,y=1cm]
+      \draw[placeholderBox] (0,0) rectangle (1.75,1.35);
+      \node[placeholderText] at (0.875,0.76) {molecule};
+      \node[placeholderText] at (0.875,0.50) {Da2};
+    \end{tikzpicture}%
+  }%
+};
+\begin{axis}[
+  at={(2.95cm,-0.02cm)},
+  anchor=north west,
+  width=5.75cm,
+  height=3.95cm,
+  xmin=-27.307, xmax=-15.400,
+  ymin=0.35, ymax=7.550,
+  axis x line*=bottom,
+  axis y line=none,
+  xlabel={},
+  xtick={-24.200,-22.200,-20.200,-18.200,-16.200},
+  xticklabels={{-4},{-2},{0},{+2},{+4}},
+  xticklabel style={font=\scriptsize\sffamily, rotate=0, anchor=north},
+  xlabel style={font=\tiny\sffamily, yshift=1pt},
+  tick align=outside,
+  ytick=\empty,
+  clip=false,
+  grid=major,
+  major grid style={gray!18},
+]
+\draw[refLine] (axis cs:-20.200,0.45) -- (axis cs:-20.200,7.450);
+\node[refLabel] at (axis cs:-20.200,7.550) {ref. -20.20};
+\draw[dumbbellLine] (axis cs:-20.200,1) -- (axis cs:-21.512,1);
+\node[refDot] at (axis cs:-20.200,1) {};
+\node[predDot, fill=methodColor0] at (axis cs:-21.512,1) {};
+\draw[dumbbellLine] (axis cs:-20.200,2) -- (axis cs:-19.132,2);
+\node[refDot] at (axis cs:-20.200,2) {};
+\node[predDot, fill=methodColor1] at (axis cs:-19.132,2) {};
+\draw[dumbbellLine] (axis cs:-20.200,3) -- (axis cs:-20.525,3);
+\node[refDot] at (axis cs:-20.200,3) {};
+\node[predDot, fill=methodColor2] at (axis cs:-20.525,3) {};
+\draw[dumbbellLine] (axis cs:-20.200,4) -- (axis cs:-21.574,4);
+\node[refDot] at (axis cs:-20.200,4) {};
+\node[predDot, fill=methodColor3] at (axis cs:-21.574,4) {};
+\draw[dumbbellLine] (axis cs:-20.200,5) -- (axis cs:-21.940,5);
+\node[refDot] at (axis cs:-20.200,5) {};
+\node[predDot, fill=methodColor4] at (axis cs:-21.940,5) {};
+\draw[dumbbellLine] (axis cs:-20.200,6) -- (axis cs:-26.507,6);
+\node[refDot] at (axis cs:-20.200,6) {};
+\node[predDot, fill=methodColor5] at (axis cs:-26.507,6) {};
+\draw[dumbbellLine] (axis cs:-20.200,7) -- (axis cs:-22.325,7);
+\node[refDot] at (axis cs:-20.200,7) {};
+\node[predDot, fill=methodColor6] at (axis cs:-22.325,7) {};
+\end{axis}
+\node[panelTitle, anchor=north west] at (0.0cm,0.28cm) {Da2};
+\end{tikzpicture}
+}
+\end{tabular}
+\vspace{3em}
+
+\begin{tabular}{@{}ccccccc@{}}
+\makebox[0.090\textwidth][c]{\tikz[baseline=-1.0ex]{\node[circle, draw=white, fill=methodColor6, minimum size=8.5pt, inner sep=0pt] {};}\hspace{0.20em}{\large\sffamily B2PLYP-D3}} & \makebox[0.090\textwidth][c]{\tikz[baseline=-1.0ex]{\node[circle, draw=white, fill=methodColor5, minimum size=8.5pt, inner sep=0pt] {};}\hspace{0.20em}{\large\sffamily MP2}} & \makebox[0.090\textwidth][c]{\tikz[baseline=-1.0ex]{\node[circle, draw=white, fill=methodColor4, minimum size=8.5pt, inner sep=0pt] {};}\hspace{0.20em}{\large\sffamily $\omega$B97X-V}} & \makebox[0.090\textwidth][c]{\tikz[baseline=-1.0ex]{\node[circle, draw=white, fill=methodColor3, minimum size=8.5pt, inner sep=0pt] {};}\hspace{0.20em}{\large\sffamily $\omega$B97X-D}} & \makebox[0.090\textwidth][c]{\tikz[baseline=-1.0ex]{\node[circle, draw=white, fill=methodColor2, minimum size=8.5pt, inner sep=0pt] {};}\hspace{0.20em}{\large\sffamily B3LYP-D3}} & \makebox[0.090\textwidth][c]{\tikz[baseline=-1.0ex]{\node[circle, draw=white, fill=methodColor1, minimum size=8.5pt, inner sep=0pt] {};}\hspace{0.20em}{\large\sffamily PBE-D3}} & \makebox[0.090\textwidth][c]{\tikz[baseline=-1.0ex]{\node[circle, draw=white, fill=methodColor0, minimum size=8.5pt, inner sep=0pt] {};}\hspace{0.20em}{\large\sffamily HF}}
+\end{tabular}
+\end{document}

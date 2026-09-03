@@ -987,12 +987,99 @@ def draw_stage_text(
     panel_y: float,
     panel_h: float,
     color: str,
+    *,
+    compact: bool = False,
+    centered: bool = False,
 ) -> None:
     """Draw a numbered explanatory caption beside a panel."""
     center_y = panel_y + panel_h / 2
-    text(ax, 0.045, center_y + 0.026, f"{number}.", size=14, color=color, weight="bold")
+    if compact:
+        label_x = 0.105
+        circle(
+            ax,
+            label_x,
+            center_y,
+            0.070,
+            facecolor=color,
+            edgecolor="white",
+            linewidth=1.5,
+            zorder=3,
+        )
+        text(
+            ax,
+            label_x,
+            center_y + 0.040,
+            f"{number}.",
+            size=16,
+            color="white",
+            weight="bold",
+            ha="center",
+            zorder=5,
+        )
+        ax.plot(
+            [label_x - 0.026, label_x + 0.026],
+            [center_y + 0.024, center_y + 0.024],
+            color="white",
+            lw=1.3,
+            transform=ax.transAxes,
+            zorder=5,
+        )
+        wrapped = textwrap.fill(description.upper(), width=15)
+        text(
+            ax,
+            label_x,
+            center_y - 0.018,
+            wrapped,
+            size=11.5,
+            color="white",
+            weight="bold",
+            ha="center",
+            linespacing=0.95,
+            zorder=5,
+        )
+        return
+
+    if centered:
+        label_x = 0.105
+        text(
+            ax,
+            label_x,
+            center_y + 0.034,
+            f"{number}.",
+            size=18,
+            color=color,
+            weight="bold",
+            ha="center",
+        )
+        ax.plot(
+            [label_x - 0.028, label_x + 0.028],
+            [center_y + 0.018, center_y + 0.018],
+            color=color,
+            lw=1.6,
+            transform=ax.transAxes,
+            zorder=4,
+        )
+        wrapped = textwrap.fill(description.upper(), width=13)
+        text(
+            ax,
+            label_x,
+            center_y + 0.004,
+            wrapped,
+            size=13,
+            color=COLORS["ink"],
+            weight="bold",
+            ha="center",
+            va="top",
+            linespacing=1.0,
+        )
+        return
+
+    label_x = 0.045
+    number_size = 14
+    description_size = 9.5
+    text(ax, label_x, center_y + 0.026, f"{number}.", size=number_size, color=color, weight="bold")
     ax.plot(
-        [0.045, 0.082],
+        [label_x, label_x + 0.037],
         [center_y + 0.013, center_y + 0.013],
         color=color,
         lw=1.5,
@@ -1002,10 +1089,10 @@ def draw_stage_text(
     wrapped = textwrap.fill(description, width=23)
     text(
         ax,
-        0.045,
+        label_x,
         center_y + 0.002,
         wrapped,
-        size=9.5,
+        size=description_size,
         color=COLORS["ink"],
         weight="bold",
         va="top",
@@ -1013,36 +1100,56 @@ def draw_stage_text(
     )
 
 
-def make_figure(output: Path, dpi: int = 240) -> list[Path]:
+def make_figure(
+    output: Path,
+    dpi: int = 240,
+    *,
+    compact: bool = False,
+    centered_labels: bool = False,
+) -> list[Path]:
     """Build the figure and save PNG, PDF, and SVG versions."""
-    fig = plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT), facecolor=COLORS["paper"])
+    background = COLORS["white"] if centered_labels else COLORS["paper"]
+    fig = plt.figure(figsize=(FIGURE_WIDTH, FIGURE_HEIGHT), facecolor=background)
     ax = fig.add_axes((0, 0, 1, 1))
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
 
-    text(
-        ax,
-        0.50,
-        0.965,
-        "Overview of Agentic Workflow",
-        size=19,
-        weight="bold",
-        ha="center",
-    )
-    ax.plot(
-        [0.37, 0.63],
-        [0.947, 0.947],
-        color=COLORS["ink"],
-        lw=1.6,
-        transform=ax.transAxes,
-        zorder=4,
-    )
+    if compact and centered_labels:
+        raise ValueError("compact and centered_labels variants are mutually exclusive")
 
-    target_x = 0.210
-    target_w = 0.700
-    row_gap = 0.022
-    next_top = 0.915
+    if compact:
+        target_x = 0.220
+        target_w = 0.760
+        row_gap = 0.022
+        next_top = 0.992
+    elif centered_labels:
+        target_x = 0.210
+        target_w = 0.700
+        row_gap = 0.034
+        next_top = 0.975
+    else:
+        text(
+            ax,
+            0.50,
+            0.965,
+            "Overview of Agentic Workflow",
+            size=19,
+            weight="bold",
+            ha="center",
+        )
+        ax.plot(
+            [0.37, 0.63],
+            [0.947, 0.947],
+            color=COLORS["ink"],
+            lw=1.6,
+            transform=ax.transAxes,
+            zorder=4,
+        )
+        target_x = 0.210
+        target_w = 0.700
+        row_gap = 0.022
+        next_top = 0.915
     panel_specs = (
         (
             draw_initial_prompt,
@@ -1071,7 +1178,7 @@ def make_figure(output: Path, dpi: int = 240) -> list[Path]:
         (
             draw_sessions,
             (0.06, 0.123, 0.88, 0.140),
-            "User prompts agent to query results.",
+            "User prompts agent to query results",
             COLORS["orange"],
         ),
     )
@@ -1083,14 +1190,23 @@ def make_figure(output: Path, dpi: int = 240) -> list[Path]:
         target_y = next_top - target_h
         target = (target_x, target_y, target_w, target_h)
         draw_transformed(ax, draw_function, source, target)
-        draw_stage_text(ax, number, description, target_y, target_h, color)
+        draw_stage_text(
+            ax,
+            number,
+            description,
+            target_y,
+            target_h,
+            color,
+            compact=compact,
+            centered=centered_labels,
+        )
         next_top = target_y - row_gap
 
     output = output.with_suffix("")
     paths = [output.with_suffix(suffix) for suffix in (".png", ".pdf", ".svg")]
-    fig.savefig(paths[0], dpi=dpi, facecolor=COLORS["paper"])
-    fig.savefig(paths[1], facecolor=COLORS["paper"])
-    fig.savefig(paths[2], facecolor=COLORS["paper"])
+    fig.savefig(paths[0], dpi=dpi, facecolor=background)
+    fig.savefig(paths[1], facecolor=background)
+    fig.savefig(paths[2], facecolor=background)
     plt.close(fig)
     return paths
 
@@ -1104,12 +1220,28 @@ def parse_args() -> argparse.Namespace:
         help="Output stem (default: agentic_workflow_ui beside this script)",
     )
     parser.add_argument("--dpi", type=int, default=240, help="PNG resolution (default: 240)")
+    variants = parser.add_mutually_exclusive_group()
+    variants.add_argument(
+        "--compact",
+        action="store_true",
+        help="Generate the titleless, tighter-margin layout variant",
+    )
+    variants.add_argument(
+        "--centered-labels",
+        action="store_true",
+        help="Generate a titleless variant with centered stage labels",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    paths = make_figure(args.output, dpi=args.dpi)
+    paths = make_figure(
+        args.output,
+        dpi=args.dpi,
+        compact=args.compact,
+        centered_labels=args.centered_labels,
+    )
     for path in paths:
         print(path)
 
